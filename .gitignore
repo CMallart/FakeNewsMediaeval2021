@@ -130,3 +130,4 @@ dmypy.json
 
 #Data Folder
 data/*
+*.pt #everything that is model
