@@ -1,0 +1,8 @@
+pandas
+datasets
+sklearn
+rouge_score
+transformers
+pytorch_tabnet
+pytorch-lightning
+lightning_flash --install-option="--no-deps"
