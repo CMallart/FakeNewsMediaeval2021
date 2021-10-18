@@ -2,14 +2,20 @@
 Our proposition for the task FakeNews:Coronavirus for MediaEval 2021
 
 ### Results
-### Results
-rajjwal1/bert-tiny:
+rajjwal1/bert-tiny :
 ```bash
     task1:      val_f1=0.610, val_matthewscorrcoef=0.286
     task2:      val_f1=0.310, val_matthewscorrcoef=0.337
     task3:      val_f1=0.946, val_matthewscorrcoef=0.919
     multitasks: val_f1=0.901, val_matthewscorrcoef=0.866
 ```
+
+vinai/bertweet-covid19-base-cased
+```bash
+    multitasks: val_f1=0.926, val_matthewscorrcoef=0.900
+```
+
+
 google/electra-small-generator:
 ```bash
     task1: val_f1=0.670, val_matthewscorrcoef=nan.0
@@ -23,7 +29,7 @@ google/electra-small-generator:
 * Build the Docker image and tag it
 
 ```bash
-docker build . -t mediaeval2021
+docker build -f Dockerfile.cpu -t mediaeval2021
 ```
 
 * Declare environment variables for the project path ($LOCAL_SOURCE_PATH), the dataset path ($LOCAL_DATA_PATH) and the model_name ($MODEL_NAME).
