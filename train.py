@@ -81,7 +81,7 @@ def task3_dataset(data_path, shuffle=False):
     return bin_cols
 
 
-def multitask_dataset(data_path: Path):
+def multitasks_dataset(data_path: Path):
     cols1 = task1_multilabels_dataset(data_path / "dev-1-task-1.csv")
     task2_dataset(data_path / "dev-1-task-2.csv")
     bin_cols = task3_dataset(data_path / "dev-1-task-3.csv")
@@ -90,9 +90,7 @@ def multitask_dataset(data_path: Path):
     df2 = pd.read_csv(outpath / "task2-train.csv")
     df3 = pd.read_csv(outpath / "task3-train.csv")
 
-    df = pd.concat(
-        [df1[cols1], df2[topics], df3[bin_cols + ["text"]]], axis=1
-    )
+    df = pd.concat([df1[cols1], df2[topics], df3[bin_cols + ["text"]]], axis=1)
     df.to_csv(outpath / "multitask-train.csv", index=False)
     return cols1 + topics + bin_cols
 
@@ -124,7 +122,8 @@ def build_train(data_path, labels, model_name):
 
     trainer = flash.Trainer(max_epochs=25)
     trainer.finetune(model, datamodule=datamodule, strategy="freeze_unfreeze")
-    trainer.test()
+    results = trainer.test()
+    print(results)
 
 
 def task1(model_name, data_path):
@@ -143,8 +142,8 @@ def task3(model_name, data_path):
     build_train(str(outpath / "task3-train.csv"), bin_cols, model_name)
 
 
-def multitask(model_name, data_path):
-    cols = multitask_dataset(Path(data_path))
+def multitasks(model_name, data_path):
+    cols = multitasks_dataset(Path(data_path))
     build_train(str(outpath / "multitask-train.csv"), cols, model_name)
 
 
