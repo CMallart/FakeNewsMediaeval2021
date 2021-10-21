@@ -11,17 +11,11 @@ from torchmetrics import MatthewsCorrcoef, F1
 
 from sklearn.metrics import matthews_corrcoef, precision_score, recall_score, f1_score
 from sklearn.preprocessing import OneHotEncoder
-from sklearn.model_selection import train_test_split
-
+from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 
 #%%
-
-
 tmppath = Path("/tmp/")
-
 #%%
-
-
 class Task:
     task_name = "task"
     multilabels = True
@@ -93,7 +87,7 @@ class Task:
             scores = [l, l_true.sum()] + [f(l_true, l_pred) for f in metrics]
             report.append(scores)
         cols = "label support precision recall f1-score mcc".split()
-        df_report = pd.DataFrame(report, columns=cols).round(2)
+        df_report = pd.DataFrame(report, columns=cols)
         df_report = df_report.set_index("label")
 
         macro_avg = df_report.mean().values
@@ -101,21 +95,39 @@ class Task:
         macro_avg[0] = weighted_avg[0] = df_report["support"].sum()
         avg = pd.DataFrame({"weighted_avg": weighted_avg, "macro_avg": macro_avg}).T
         avg.columns = cols[1:]
-        df_report = pd.concat([df_report, avg])
+        df_report = pd.concat([df_report, avg]).round(2)
         df_report.to_csv(f"/tmp/report_{self.task_name}.tsv", sep="\t")
+
+    def train_test_split(self, df):
+        y = np.vstack(df[self.labels].values)
+        train_index, tmp_index, val_index, test_index = (0, 0, 0, 0)
+
+        splitter = MultilabelStratifiedShuffleSplit(
+            n_splits=2, test_size=0.2, random_state=17
+        )
+        for train_index, tmp_index in splitter.split(y, y):
+            break
+
+        splitter = MultilabelStratifiedShuffleSplit(
+            n_splits=2, test_size=0.5, random_state=17
+        )
+        for val_index, test_index in splitter.split(y[tmp_index], y[tmp_index]):
+            break
+
+        val_index, test_index = tmp_index[val_index], tmp_index[test_index]
+        return df.iloc[train_index], df.iloc[val_index], df.iloc[test_index]
 
     def run(self, model_name, data_path="/data", model_outpath="/tmp/model.pt"):
         data_path = Path(data_path)
         df_dev = self.get_dataset(data_path / "dev")
         df_dev1 = self.get_dataset(data_path / "dev-1")
         df = pd.concat([df_dev1, df_dev])
+        train, val, test = self.train_test_split(df)
 
         train_path = str(tmppath / f"{self.task_name}-train.csv")
         valid_path = str(tmppath / f"{self.task_name}-valid.csv")
         test_path = str(tmppath / f"{self.task_name}-test.csv")
 
-        train, val = train_test_split(df, test_size=0.2, random_state=17, shuffle=True)
-        test, val = train_test_split(val, test_size=0.5, random_state=17, shuffle=True)
         train.to_csv(train_path, index=False)
         val.to_csv(valid_path, index=False)
         test.to_csv(test_path, index=False)
@@ -194,8 +206,6 @@ class MultiTasks(Task):
 
 
 #%%
-
-
 if __name__ == "__main__":
     import fire
 
