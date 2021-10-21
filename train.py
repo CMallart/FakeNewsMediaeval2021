@@ -114,12 +114,10 @@ class Task:
         valid_path = str(tmppath / f"{self.task_name}-valid.csv")
         test_path = str(tmppath / f"{self.task_name}-test.csv")
 
-        train, test = train_test_split(df, test_size=0.2, random_state=17, shuffle=True)
-        train, valid = train_test_split(
-            train, test_size=0.2, random_state=17, shuffle=True
-        )
+        train, val = train_test_split(df, test_size=0.2, random_state=17, shuffle=True)
+        test, val = train_test_split(val, test_size=0.5, random_state=17, shuffle=True)
         train.to_csv(train_path, index=False)
-        valid.to_csv(valid_path, index=False)
+        val.to_csv(valid_path, index=False)
         test.to_csv(test_path, index=False)
 
         model = self.build_train(train_path, valid_path, model_name, model_outpath)
