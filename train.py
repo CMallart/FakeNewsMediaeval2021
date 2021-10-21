@@ -11,12 +11,13 @@ from torchmetrics import MatthewsCorrcoef, F1
 
 from sklearn.metrics import matthews_corrcoef, precision_score, recall_score, f1_score
 from sklearn.preprocessing import OneHotEncoder
+from sklearn.model_selection import train_test_split
 
 
 #%%
 
 
-outpath = Path("/tmp/")
+tmppath = Path("/tmp/")
 
 #%%
 
@@ -40,19 +41,6 @@ class Task:
         with p.open() as f:
             data = [l.strip().split(",", maxsplit) for l in f]
             return pd.DataFrame(data, columns=cols)  # .set_index("id")
-
-    def split_dataset(self, df, shuffle=True):
-        if shuffle:
-            df = df.sample(frac=1)
-        ll = len(df)
-        train_split, test_split = int(ll * 0.8), int(ll * 0.9)
-        df.iloc[:train_split].to_csv(
-            outpath / f"{self.task_name}-train.csv", index=False
-        )
-        df.iloc[train_split:test_split].to_csv(
-            outpath / f"{self.task_name}-valid.csv", index=False
-        )
-        df.iloc[test_split:].to_csv(outpath / f"{self.task_name}-test.csv", index=False)
 
     def build_train(self, train_path, valid_path, model_name, model_outpath=None):
         if len(self.labels) == 1:
@@ -94,9 +82,9 @@ class Task:
         probas = np.array(model.predict(df.text))
         y_pred = (probas >= 0.5).astype(int)
         y_true = np.vstack(df[self.labels].values)
-        self.eval_report(y_true, y_pred)
+        self.classification_report(y_true, y_pred)
 
-    def eval_report(self, y_true, y_pred):
+    def classification_report(self, y_true, y_pred):
         metrics = [precision_score, recall_score, f1_score, matthews_corrcoef]
         report = []
         for i, l in enumerate(self.labels):
@@ -106,18 +94,33 @@ class Task:
             report.append(scores)
         cols = "label support precision recall f1-score mcc".split()
         df_report = pd.DataFrame(report, columns=cols).round(2)
-        df_report.to_csv(f"/tmp/report_{self.task_name}.tsv", sep="\t", index=False)
+        df_report = df_report.set_index("label")
+
+        macro_avg = df_report.mean().values
+        weighted_avg = np.average(df_report, weights=df_report["support"], axis=0)
+        macro_avg[0] = weighted_avg[0] = df_report["support"].sum()
+        avg = pd.DataFrame({"weighted_avg": weighted_avg, "macro_avg": macro_avg}).T
+        avg.columns = cols[1:]
+        df_report = pd.concat([df_report, avg])
+        df_report.to_csv(f"/tmp/report_{self.task_name}.tsv", sep="\t")
 
     def run(self, model_name, data_path="/data", model_outpath="/tmp/model.pt"):
         data_path = Path(data_path)
         df_dev = self.get_dataset(data_path / "dev")
         df_dev1 = self.get_dataset(data_path / "dev-1")
         df = pd.concat([df_dev1, df_dev])
-        self.split_dataset(df)
 
-        train_path = str(outpath / f"{self.task_name}-train.csv")
-        valid_path = str(outpath / f"{self.task_name}-valid.csv")
-        test_path = str(outpath / f"{self.task_name}-test.csv")
+        train_path = str(tmppath / f"{self.task_name}-train.csv")
+        valid_path = str(tmppath / f"{self.task_name}-valid.csv")
+        test_path = str(tmppath / f"{self.task_name}-test.csv")
+
+        train, test = train_test_split(df, test_size=0.2, random_state=17, shuffle=True)
+        train, valid = train_test_split(
+            train, test_size=0.2, random_state=17, shuffle=True
+        )
+        train.to_csv(train_path, index=False)
+        valid.to_csv(valid_path, index=False)
+        test.to_csv(test_path, index=False)
 
         model = self.build_train(train_path, valid_path, model_name, model_outpath)
         self.predict(model, test_path)
@@ -147,7 +150,6 @@ class Task1(Task):
 
 class Task2(Task):
     task_name = "task-2"
-
     labels = [
         "Suppressed cures",
         "Behaviour and Mind Control",
