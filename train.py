@@ -1,157 +1,200 @@
 #%%
 from pathlib import Path
 import pandas as pd
+import numpy as np
 import torch
 import flash
 
+from flash.text import TextClassificationData, TextClassifier
+from flash.core.classification import Labels, Probabilities
 from torchmetrics import MatthewsCorrcoef, F1
 
-from flash.text import TextClassificationData, TextClassifier
-from flash.core.classification import Labels
-from sklearn.metrics import classification_report
+from sklearn.metrics import matthews_corrcoef, precision_score, recall_score, f1_score
 from sklearn.preprocessing import OneHotEncoder
 
 
 #%%
-classes = [
-    "Non-Conspiracy",
-    "Discusses Conspiracy",
-    "Promotes/Supports Conspiracy",
-]
 
-topics = [
-    "Suppressed cures",
-    "Behaviour and Mind Control",
-    "Antivax",
-    "Fake virus",
-    "Intentional Pandemic",
-    "Harmful Radiation/ Influence",
-    "Population reduction",
-    "New World Order",
-    "Satanism",
-]
+
 outpath = Path("/tmp/")
 
 #%%
 
 
-def task1_dataset(data_path, shuffle=False):
-    cols = "id class text".split()
-    df = pd.read_csv(data_path, sep=",", names=cols)
-    df["class"] = df["class"] - 1
-    if shuffle:
-        df = df.sample(frac=1)
-    df.to_csv(outpath / "task1-train.csv", index=False)
-
-
-def task1_multilabels_dataset(data_path, shuffle=False):
-    cols = "id class text".split()
-    df = pd.read_csv(data_path, sep=",", names=cols)
-    bin_labels = pd.get_dummies(df["class"])
-    bin_labels.columns = classes
-    df = pd.concat([df, bin_labels], axis=1)
-
-    if shuffle:
-        df = df.sample(frac=1)
-    df.to_csv(outpath / "task1-train.csv", index=False)
-    return classes
-
-
-def task2_dataset(data_path, shuffle=False):
-    cols = ["id"] + topics + ["text"]
-    df = pd.read_csv(data_path, sep=",", names=cols)
-    if shuffle:
-        df = df.sample(frac=1)
-    df.to_csv(outpath / "task2-train.csv", index=False)
-
-
-def task3_dataset(data_path, shuffle=False):
-    cols = ["id"] + topics + ["text"]
-    df = pd.read_csv(data_path, sep=",", names=cols)
-
-    enc = OneHotEncoder()
-    X = enc.fit_transform(df[topics]).toarray().astype(int)
-    bin_cols = [f"{t} + {c}" for c in classes for t in topics]
-    bin_labels = pd.DataFrame(X, columns=bin_cols)
-    df = pd.concat([df, bin_labels], axis=1)
-    if shuffle:
-        df = df.sample(frac=1)
-
-    df.to_csv(outpath / "task3-train.csv", index=False)
-    return bin_cols
-
-
-def multitasks_dataset(data_path: Path):
-    cols1 = task1_multilabels_dataset(data_path / "dev-1-task-1.csv")
-    task2_dataset(data_path / "dev-1-task-2.csv")
-    bin_cols = task3_dataset(data_path / "dev-1-task-3.csv")
-
-    df1 = pd.read_csv(outpath / "task1-train.csv")
-    df2 = pd.read_csv(outpath / "task2-train.csv")
-    df3 = pd.read_csv(outpath / "task3-train.csv")
-
-    df = pd.concat([df1[cols1], df2[topics], df3[bin_cols + ["text"]]], axis=1)
-    df.to_csv(outpath / "multitask-train.csv", index=False)
-    return cols1 + topics + bin_cols
-
-
-def build_train(data_path, labels, model_name):
+class Task:
+    task_name = "task"
     multilabels = True
-    if len(labels) == 1:
-        labels = labels[0]
-        multilabels = False
+    labels = []
+    max_epochs = 25
 
-    datamodule = TextClassificationData.from_csv(
-        "text",
-        labels,
-        train_file=data_path,
-        # val_file=str(outpath / "valid.csv"),
-        val_split=0.2,
-        backbone=model_name,
-        batch_size=64,
-    )
+    @classmethod
+    def get_dataset(cls, data_path: Path):
+        pass
 
-    model = TextClassifier(
-        num_classes=datamodule.num_classes,
-        backbone=model_name,
-        metrics=[F1(datamodule.num_classes), MatthewsCorrcoef(datamodule.num_classes)],
-        optimizer=torch.optim.AdamW,
-        serializer=Labels(multi_label=True),
-        multi_label=multilabels,
-    )
+    @classmethod
+    def read_clean_csv(cls, path, cols):
+        """ensure that multiple ',' in text won't be assumed to be separators"""
+        maxsplit = len(cols) - 1
+        path = Path(path)
+        p = path / f"{path.name}-{cls.task_name}.csv"
+        with p.open() as f:
+            data = [l.strip().split(",", maxsplit) for l in f]
+            return pd.DataFrame(data, columns=cols)  # .set_index("id")
 
-    trainer = flash.Trainer(max_epochs=25)
-    trainer.finetune(model, datamodule=datamodule, strategy="freeze_unfreeze")
-    results = trainer.test()
-    print(results)
+    def split_dataset(self, df, shuffle=True):
+        if shuffle:
+            df = df.sample(frac=1)
+        ll = len(df)
+        train_split, test_split = int(ll * 0.8), int(ll * 0.9)
+        df.iloc[:train_split].to_csv(
+            outpath / f"{self.task_name}-train.csv", index=False
+        )
+        df.iloc[train_split:test_split].to_csv(
+            outpath / f"{self.task_name}-valid.csv", index=False
+        )
+        df.iloc[test_split:].to_csv(outpath / f"{self.task_name}-test.csv", index=False)
+
+    def build_train(self, train_path, valid_path, model_name, model_outpath=None):
+        if len(self.labels) == 1:
+            self.labels = self.labels[0]
+            self.multilabels = False
+
+        datamodule = TextClassificationData.from_csv(
+            "text",
+            self.labels,
+            train_file=train_path,
+            val_file=valid_path,
+            # val_split=0.2,
+            backbone=model_name,
+            batch_size=64,
+        )
+
+        n_classes = datamodule.num_classes
+        model = TextClassifier(
+            num_classes=n_classes,
+            backbone=model_name,
+            metrics=[
+                F1(n_classes),
+                MatthewsCorrcoef(n_classes),
+            ],
+            optimizer=torch.optim.AdamW,
+            serializer=Probabilities(multi_label=True),  # Labels(multi_label=True),
+            multi_label=self.multilabels,
+        )
+
+        trainer = flash.Trainer(max_epochs=self.max_epochs)
+        trainer.finetune(model, datamodule=datamodule, strategy="freeze_unfreeze")
+        if model_outpath:
+            trainer.save_checkpoint(model_outpath)
+        return model
+
+    def predict(self, model, test_path):
+        model.eval()
+        df = pd.read_csv(test_path)
+        probas = np.array(model.predict(df.text))
+        y_pred = (probas >= 0.5).astype(int)
+        y_true = np.vstack(df[self.labels].values)
+        self.eval_report(y_true, y_pred)
+
+    def eval_report(self, y_true, y_pred):
+        metrics = [precision_score, recall_score, f1_score, matthews_corrcoef]
+        report = []
+        for i, l in enumerate(self.labels):
+            l_true = y_true[:, i]
+            l_pred = y_pred[:, i]
+            scores = [l, l_true.sum()] + [f(l_true, l_pred) for f in metrics]
+            report.append(scores)
+        cols = "label support precision recall f1-score mcc".split()
+        df_report = pd.DataFrame(report, columns=cols).round(2)
+        df_report.to_csv(f"/tmp/report_{self.task_name}.tsv", sep="\t", index=False)
+
+    def run(self, model_name, data_path="/data", model_outpath="/tmp/model.pt"):
+        data_path = Path(data_path)
+        df_dev = self.get_dataset(data_path / "dev")
+        df_dev1 = self.get_dataset(data_path / "dev-1")
+        df = pd.concat([df_dev1, df_dev])
+        self.split_dataset(df)
+
+        train_path = str(outpath / f"{self.task_name}-train.csv")
+        valid_path = str(outpath / f"{self.task_name}-valid.csv")
+        test_path = str(outpath / f"{self.task_name}-test.csv")
+
+        model = self.build_train(train_path, valid_path, model_name, model_outpath)
+        self.predict(model, test_path)
+
+    def load_predict(self, model_path, valid_path):
+        model = TextClassifier.load_from_checkpoint(checkpoint_path=model_path)
+        self.predict(model, valid_path)
 
 
-def task1(model_name, data_path):
-    # task1_dataset(data_path)
-    cols = task1_multilabels_dataset(data_path)
-    build_train(str(outpath / "task1-train.csv"), cols, model_name)
+class Task1(Task):
+    task_name = "task-1"
+    labels = ["Non-Conspiracy", "Discusses Conspiracy", "Promotes/Supports Conspiracy"]
+
+    @classmethod
+    def get_dataset(cls, data_path):
+        cols = "id class text".split()
+        df = cls.read_clean_csv(data_path, cols)
+
+        if Task1.multilabels:
+            bin_labels = pd.get_dummies(df["class"])
+            bin_labels.columns = Task1.labels
+            return pd.concat([df, bin_labels], axis=1)
+
+        df["class"] = df["class"] - 1
+        return df
 
 
-def task2(model_name, data_path):
-    task2_dataset(data_path)
-    build_train(str(outpath / "task2-train.csv"), topics, model_name)
+class Task2(Task):
+    task_name = "task-2"
+
+    labels = [
+        "Suppressed cures",
+        "Behaviour and Mind Control",
+        "Antivax",
+        "Fake virus",
+        "Intentional Pandemic",
+        "Harmful Radiation/ Influence",
+        "Population reduction",
+        "New World Order",
+        "Satanism",
+    ]
+
+    @classmethod
+    def get_dataset(cls, data_path: Path):
+        cols = ["id"] + Task2.labels + ["text"]
+        return cls.read_clean_csv(data_path, cols)
 
 
-def task3(model_name, data_path):
-    bin_cols = task3_dataset(data_path)
-    build_train(str(outpath / "task3-train.csv"), bin_cols, model_name)
+class Task3(Task):
+    task_name = "task-3"
+    labels = [f"{t} + {c}" for c in Task1.labels for t in Task2.labels]
+
+    @classmethod
+    def get_dataset(cls, data_path: Path):
+        cols = ["id"] + Task2.labels + ["text"]
+        df = cls.read_clean_csv(data_path, cols)
+
+        enc = OneHotEncoder()
+        X = enc.fit_transform(df[Task2.labels]).toarray().astype(int)
+        bin_labels = pd.DataFrame(X, columns=Task3.labels)
+        return pd.concat([df, bin_labels], axis=1)
 
 
-def multitasks(model_name, data_path):
-    cols = multitasks_dataset(Path(data_path))
-    build_train(str(outpath / "multitask-train.csv"), cols, model_name)
+class MultiTasks(Task):
+    task_name = "multitasks"
+    labels = Task1.labels + Task2.labels + Task3.labels
+
+    @classmethod
+    def get_dataset(cls, data_path: Path):
+        df1 = Task1.get_dataset(data_path)[Task1.labels]
+        df2 = Task2.get_dataset(data_path)[Task2.labels]
+        df3 = Task3.get_dataset(data_path)[Task3.labels + ["text"]]
+        return pd.concat([df1, df2, df3], axis=1)
 
 
 #%%
 
-# model_name = "prajjwal1/bert-tiny", "google/electra-small-generator", "unitary/toxic-bert"
-# data_path = "/home/tgirault/data/fake_news_datasets/medieval/dev-1/dev-1-task-2.csv"
-# task3(model_name, data_path)
 
 if __name__ == "__main__":
     import fire

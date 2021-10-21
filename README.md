@@ -42,8 +42,8 @@ export MODEL_NAME=prajjwal1/bert-tiny
 * Use the docker image to run experiments.
 
 ```bash
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py multitasks $MODEL_NAME /data/dev-1/
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py task1 $MODEL_NAME /data/dev-1/dev-1-task-1.csv                                                                   
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py task2 $MODEL_NAME /data/dev-1/dev-1-task-2.csv                                                                   
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py task3 $MODEL_NAME /data/dev-1/dev-1-task-3.csv
+docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py MultiTasks - run $MODEL_NAME /data
+docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py Task1 - run $MODEL_NAME /data
+docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py Task2 - run $MODEL_NAME /data
+docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py Task3 - run $MODEL_NAME /data
 ```
