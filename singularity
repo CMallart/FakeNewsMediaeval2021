@@ -1,0 +1,17 @@
+Bootstrap: docker
+
+From: docker://pytorch/pytorch:1.9.0-cuda11.1-cudnn8-runtime
+
+Registry: index.docker.io
+
+%runscript
+    exec python train.py
+
+
+%post
+    pip install --no-cache-dir lightning-flash[text] sklearn fire datasets==1.12.1 emoji iterative-stratification
+    echo "Singularity terminated"
+
+%labels
+
+    AUTHOR Duc-Hau
