@@ -3,6 +3,10 @@ from pathlib import Path
 import pandas as pd
 import numpy as np
 import torch
+
+from pytorch_lightning import seed_everything
+seed_everything(42)
+
 import flash
 
 from flash.text import TextClassificationData, TextClassifier
@@ -63,8 +67,8 @@ class Task:
             serializer=Probabilities(multi_label=True),  # Labels(multi_label=True),
             multi_label=self.multilabels,
         )
-
-        trainer = flash.Trainer(max_epochs=self.max_epochs)
+        nb_gpus = torch.cuda.device_count()
+        trainer = flash.Trainer(max_epochs=self.max_epochs, gpus=nb_gpus)
         trainer.finetune(model, datamodule=datamodule, strategy="freeze_unfreeze")
         if model_outpath:
             trainer.save_checkpoint(model_outpath)
