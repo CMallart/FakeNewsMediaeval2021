@@ -96,7 +96,7 @@ class Trainer:
             test.to_csv(test_path, index=False)
         return train, val, test
 
-    def run(self, data_path="/data", model_outpath="/tmp/model.pt"):
+    def train(self, data_path="/data", model_outpath="/tmp/model.pt"):
         df_train, df_val, df_test = self.preprocess_data(data_path)
         self.fit(df_train, df_val, model_outpath)
         report = self.predict(df_test)
