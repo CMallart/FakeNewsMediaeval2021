@@ -1,7 +1,9 @@
 lightning-flash[text]
 datasets==1.12.1
-sklearn==1.0.1
+sklearn
 iterative-stratification
 fire
 emoji
--e git+https://github.com/thunlp/OpenPrompt.git
+-e git://github.com/thunlp/OpenPrompt.git#egg=OpenPrompt
+yacs
+tensorboardX
