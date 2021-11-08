@@ -4,7 +4,7 @@ import pandas as pd
 import torch
 from torch.nn.modules.loss import BCELoss, CrossEntropyLoss
 from transformers import AdamW, get_linear_schedule_with_warmup
-
+# from torch.optim import AdamW
 from openprompt.data_utils import InputExample
 from openprompt import PromptForClassification, PromptDataLoader
 from openprompt.prompts import ManualTemplate, ManualVerbalizer
@@ -196,4 +196,4 @@ class PromptTrainer(Trainer):
 if __name__ == "__main__":
     import fire
 
-    fire.Fire(PromptClassificationTask)
+    fire.Fire(PromptTrainer)

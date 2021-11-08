@@ -1,8 +1,11 @@
 #%%
 import numpy as np
-import torch
+import pandas as pd
+from torch.optim import AdamW
+
 from pytorch_lightning import seed_everything
-from torchmetrics import MatthewsCorrcoef, F1
+from torchmetrics.classification.matthews_corrcoef import MatthewsCorrcoef
+from torchmetrics.classification.f_beta import F1
 
 seed_everything(42)
 
@@ -44,7 +47,7 @@ class FlashTrainer(Trainer):
     def fit(self, df_train, df_valid, model_outpath=None):
         if len(self.labels) == 1:
             self.labels = self.labels[0]
-            self.multilabels = False
+            self.task.multilabels = False
 
         datamodule = self.get_dataloader(df_train, df_valid)
 
@@ -56,9 +59,9 @@ class FlashTrainer(Trainer):
                 F1(n_classes),
                 MatthewsCorrcoef(n_classes),
             ],
-            optimizer=torch.optim.AdamW,
+            optimizer=AdamW,
             serializer=Probabilities(multi_label=True),  # Labels(multi_label=True),
-            multi_label=self.multilabels,
+            multi_label=self.task.multilabels,
         )
 
         trainer = flash.Trainer(max_epochs=self.max_epochs, gpus=self.nb_gpus)
@@ -72,10 +75,15 @@ class FlashTrainer(Trainer):
         y_true = np.vstack(df_val[self.labels].values)
         self.classification_report(y_true, y_pred)
 
+    def load_predict(self, model_path, test_path):
+        self.model = TextClassifier.load_from_checkpoint(checkpoint_path=model_path)
+        df_test = pd.read_csv(test_path)
+        self.predict(df_test)
+
 
 #%%
 if __name__ == "__main__":
     import fire
 
-    fire.Fire()
+    fire.Fire(FlashTrainer)
 # %%

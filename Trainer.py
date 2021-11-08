@@ -80,7 +80,7 @@ class Trainer:
         val_index, test_index = tmp_index[val_index], tmp_index[test_index]
         return df.iloc[train_index], df.iloc[val_index], df.iloc[test_index]
 
-    def prepocess_data(self, data_path, save=True):
+    def preprocess_data(self, data_path, save=True):
         data_path = Path(data_path)
         df_dev = self.task.get_dataset(data_path / "dev")
         df_dev1 = self.task.get_dataset(data_path / "dev-1")
@@ -99,9 +99,6 @@ class Trainer:
     def run(self, data_path="/data", model_outpath="/tmp/model.pt"):
         df_train, df_val, df_test = self.preprocess_data(data_path)
         self.fit(df_train, df_val, model_outpath)
-        self.predict(df_test)
+        report = self.predict(df_test)
+        print(report)
 
-    def load_predict(self, model_path, test_path):
-        self.model = TextClassifier.load_from_checkpoint(checkpoint_path=model_path)
-        df_test = pd.read_csv(test_path)
-        self.predict(df_test)
