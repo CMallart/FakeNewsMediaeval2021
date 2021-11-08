@@ -32,18 +32,18 @@ google/electra-small-generator:
 docker build -f Dockerfile.cpu -t mediaeval2021
 ```
 
-* Declare environment variables for the project path ($LOCAL_SOURCE_PATH), the dataset path ($LOCAL_DATA_PATH) and the model_name ($MODEL_NAME).
+* Declare environment variables for the project path, the dataset local path and the pretrained model name, the trainer type and the task name.
 ```bash
-export LOCAL_SOURCE_PATH=/home/me/projects/mediaeval2021/
+export PROJECT_PATH=/home/me/projects/mediaeval2021/
 export LOCAL_DATA_PATH=/home/me/data/mediaeval2021/
 export MODEL=prajjwal1/bert-tiny
-export TRAINER=prajjwal1/bert-tiny
+export TRAINER_SCRIPT=FlashTrainer.py # PromptTrainer.py
 export TASK=task-1 # task-2, task-3, multitasks
 ```
 
 * Use the docker image to run experiments.
 
 ```bash
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python FlashTrainer.py --task_name=$TASK --model_name=$MODEL - train /data
+docker run -it --rm  -v $PROJECT_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python FlashTrainer.py --task_name=$TASK --model_name=$MODEL - train /data
 ```
 
