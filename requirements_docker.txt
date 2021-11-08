@@ -4,6 +4,6 @@ sklearn
 iterative-stratification
 fire
 emoji
--e git://github.com/thunlp/OpenPrompt.git#egg=OpenPrompt
+https://github.com/thunlp/OpenPrompt/archive/refs/heads/main.zip
 yacs
 tensorboardX
