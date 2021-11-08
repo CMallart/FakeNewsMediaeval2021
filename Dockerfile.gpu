@@ -1,5 +1,4 @@
 FROM pytorch/pytorch:1.9.0-cuda11.1-cudnn8-runtime 
-# pytorchlightning/pytorch_lightning:base-cuda-py3.8-torch1.9
 WORKDIR /app
 COPY . /app
-RUN pip install --no-cache-dir lightning-flash[text] sklearn fire datasets==1.12.1 emoji iterative-stratification
+RUN pip install --no-cache-dir -r requirements_docker.txt

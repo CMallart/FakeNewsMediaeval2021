@@ -1,0 +1,7 @@
+lightning-flash[text]
+datasets==1.12.1
+sklearn==1.0.1
+iterative-stratification
+fire
+emoji
+-e git+https://github.com/thunlp/OpenPrompt.git
