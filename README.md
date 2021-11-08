@@ -36,14 +36,14 @@ docker build -f Dockerfile.cpu -t mediaeval2021
 ```bash
 export LOCAL_SOURCE_PATH=/home/me/projects/mediaeval2021/
 export LOCAL_DATA_PATH=/home/me/data/mediaeval2021/
-export MODEL_NAME=prajjwal1/bert-tiny
+export MODEL=prajjwal1/bert-tiny
+export TRAINER=prajjwal1/bert-tiny
+export TASK=task-1 # task-2, task-3, multitasks
 ```
 
 * Use the docker image to run experiments.
 
 ```bash
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py MultiTasks - run $MODEL_NAME /data
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py Task1 - run $MODEL_NAME /data
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py Task2 - run $MODEL_NAME /data
-docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python train.py Task3 - run $MODEL_NAME /data
+docker run -it --rm  -v $LOCAL_SOURCE_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python FlashTrainer.py --task_name=$TASK --model_name=$MODEL - train /data
 ```
+
