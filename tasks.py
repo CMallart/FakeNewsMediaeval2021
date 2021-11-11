@@ -2,6 +2,7 @@ from pathlib import Path
 import pandas as pd
 from sklearn.preprocessing import OneHotEncoder
 
+
 class Task:
     task_name = "task"
     multilabels = True
@@ -19,7 +20,7 @@ class Task:
         p = path / f"{path.name}-{cls.task_name}.csv"
         with p.open() as f:
             data = [l.strip().split(",", maxsplit) for l in f]
-            return pd.DataFrame(data, columns=cols)  # .set_index("id")
+            return pd.DataFrame(data, columns=cols)
 
 
 class Task1(Task):
@@ -57,7 +58,10 @@ class Task2(Task):
     @classmethod
     def get_dataset(cls, data_path: Path):
         cols = ["id"] + Task2.labels + ["text"]
-        return cls.read_clean_csv(data_path, cols)
+        df = cls.read_clean_csv(data_path, cols)
+        for l in Task2.labels:
+            df[l] = pd.to_numeric(df[l])
+        return df
 
 
 class Task3(Task):

@@ -4,6 +4,7 @@ import pandas as pd
 import torch
 from torch.nn.modules.loss import BCELoss, CrossEntropyLoss
 from transformers import AdamW, get_linear_schedule_with_warmup
+
 # from torch.optim import AdamW
 from openprompt.data_utils import InputExample
 from openprompt import PromptForClassification, PromptDataLoader
@@ -63,17 +64,22 @@ class PromptTrainer(Trainer):
          TEXT & LABEL_i -> [0,1]
         """
         res = [
-            [i, i * j, r.text, label, r[label]]
+            [i, r.text, label, r[label]]
             for i, r in df.iterrows()
-            for j, label in enumerate(self.labels)
+            for label in self.labels
         ]
-        cols = "doc_id guid text_a text_b label".split()
-        return pd.DataFrame(res, columns=cols)
+        cols = "doc_id text_a text_b label".split()
+        bdf = pd.DataFrame(res, columns=cols)
+        bdf["guid"] = bdf.index
+        bdf.label = bdf.label.astype(int)
+        return bdf
 
     def get_data_loader(self, bdf, shuffle=True):
         dataset = bdf.apply(
             lambda x: InputExample(x.guid, x.text_a, x.text_b, x.label), axis=1
         ).tolist()
+        print(bdf.head(10))
+        print(bdf.dtypes)
         return PromptDataLoader(
             dataset=dataset,
             template=self.template,
@@ -171,7 +177,7 @@ class PromptTrainer(Trainer):
         bdf["true"] = alllabels
 
         groups = bdf.groupby("doc_id").agg(list)
-        groups = groups[groups.label.apply(len) == 3]
+        groups = groups[groups.label.apply(len) == len(self.task.labels)]
         y_true = np.stack(groups["true"])
         y_pred = np.stack(groups["pred"])
         return self.classification_report(y_true, y_pred)
@@ -189,6 +195,11 @@ class PromptTrainer(Trainer):
     #         loss_function="cross_entropy",
     #     )
     #     runner.run()
+
+
+#%%
+# pt = PromptTrainer("task-2")
+# pt.train("/home/tgirault/data/fake_news_datasets/medieval/")
 
 
 #%%
