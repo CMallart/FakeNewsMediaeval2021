@@ -16,9 +16,11 @@ class Trainer:
 
     def __init__(self, task_name, backbone="prajjwal1/bert-tiny"):
 
+        self.backbone = backbone
+
         self.nb_gpus = torch.cuda.device_count()
         self.use_cuda = self.nb_gpus > 0
-        self.backbone = backbone
+        self.device = torch.device("cuda" if self.use_cuda else "cpu") 
 
         self.task_name = task_name
         if task_name == "task-1":
