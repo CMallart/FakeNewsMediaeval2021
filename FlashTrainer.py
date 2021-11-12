@@ -10,13 +10,16 @@ from torchmetrics.classification.f_beta import F1
 seed_everything(42)
 
 import flash
-from flash.text import TextClassificationData, TextClassifier
+from flash.text import TextClassificationData
+from TextClassifier import TextClassifier
 from flash.core.classification import Labels, Probabilities
 
 from Trainer import Trainer
 
 #%%
 #%%
+
+
 
 
 class FlashTrainer(Trainer):
