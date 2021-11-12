@@ -2,17 +2,16 @@
 import numpy as np
 import pandas as pd
 from torch.optim import AdamW
-
-from pytorch_lightning import seed_everything
+from pytorch_lightning.callbacks import ModelCheckpoint
 from torchmetrics.classification.matthews_corrcoef import MatthewsCorrcoef
 from torchmetrics.classification.f_beta import F1
-
-seed_everything(42)
 
 import flash
 from flash.text import TextClassificationData
 from TextClassifier import TextClassifier
 from flash.core.classification import Labels, Probabilities
+from flash.core.finetuning import FreezeUnfreeze
+
 
 from Trainer import Trainer
 
@@ -20,10 +19,8 @@ from Trainer import Trainer
 #%%
 
 
-
-
 class FlashTrainer(Trainer):
-    max_epochs = 25
+    max_epochs = 30
 
     def get_dataloader(self, df_train, df_valid, test_path=None):
         return TextClassificationData.from_data_frame(
@@ -65,10 +62,26 @@ class FlashTrainer(Trainer):
             optimizer=AdamW,
             serializer=Probabilities(multi_label=True),  # Labels(multi_label=True),
             multi_label=self.task.multilabels,
+            learning_rate=1e-4,
+            lr_scheduler="constant_schedule",
         )
 
-        trainer = flash.Trainer(max_epochs=self.max_epochs, gpus=self.nb_gpus)
+        checkpoint_callback = ModelCheckpoint(
+            monitor="val_binary_cross_entropy_with_logits"
+        )
+        trainer = flash.Trainer(
+            max_epochs=self.max_epochs,
+            gpus=self.nb_gpus,
+            callbacks=[checkpoint_callback],
+        )
+
         trainer.finetune(self.model, datamodule=datamodule, strategy="freeze_unfreeze")
+        # trainer.finetune(self.model, datamodule=datamodule, strategy=FreezeUnfreeze(unfreeze_epoch=10))
+
+        self.model = TextClassifier.load_from_checkpoint(
+            checkpoint_path=checkpoint_callback.best_model_path
+        )
+
         if model_outpath:
             trainer.save_checkpoint(model_outpath)
 
@@ -81,7 +94,8 @@ class FlashTrainer(Trainer):
     def load_predict(self, model_path, test_path):
         self.model = TextClassifier.load_from_checkpoint(checkpoint_path=model_path)
         df_test = pd.read_csv(test_path)
-        self.predict(df_test)
+        report = self.predict(df_test)
+        print(report)
 
 
 #%%
