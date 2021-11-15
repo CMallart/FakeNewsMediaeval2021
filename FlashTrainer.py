@@ -20,7 +20,7 @@ from Trainer import Trainer
 
 
 class FlashTrainer(Trainer):
-    max_epochs = 30
+    max_epochs = 1
 
     def get_dataloader(self, df_train, df_valid, test_path=None):
         return TextClassificationData.from_data_frame(
@@ -89,6 +89,7 @@ class FlashTrainer(Trainer):
         probas = np.array(self.model.predict(df_val.text))
         y_pred = (probas >= 0.5).astype(int)
         y_true = np.vstack(df_val[self.labels].values)
+        self.task.output_prediction(df_val.id, probas, self.run_id)
         return self.classification_report(y_true, y_pred)
 
     def load_predict(self, model_path, test_path):
@@ -96,6 +97,8 @@ class FlashTrainer(Trainer):
         df_test = pd.read_csv(test_path)
         report = self.predict(df_test)
         print(report)
+              
+      
 
 
 #%%
