@@ -20,7 +20,7 @@ from Trainer import Trainer
 
 
 class FlashTrainer(Trainer):
-    max_epochs = 30
+    max_epochs = 80
 
     def get_dataloader(self, df_train, df_valid, test_path=None):
         return TextClassificationData.from_data_frame(
