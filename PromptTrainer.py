@@ -139,6 +139,7 @@ class PromptTrainer(Trainer):
         optimizer1, optimizer2 = self.get_optimizers()
         train_dataloader = self.get_data_loader(self.binarize_dataframe(df_train))
 
+        self.model = self.model.to(self.device)
         for epoch in tqdm(range(self.max_epochs)):
             self.model.train()
             tot_loss = 0
