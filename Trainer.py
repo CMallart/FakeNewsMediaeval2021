@@ -16,9 +16,10 @@ tmppath.mkdir(parents=True, exist_ok=True)
 class Trainer:
     max_epochs = 25
 
-    def __init__(self, task_name, backbone="prajjwal1/bert-tiny"):
+    def __init__(self, task_name, run_id=1, backbone="prajjwal1/bert-tiny"):
 
         self.backbone = backbone
+        self.run_id = run_id
 
         self.nb_gpus = torch.cuda.device_count()
         self.use_cuda = self.nb_gpus > 0

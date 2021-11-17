@@ -89,6 +89,7 @@ class FlashTrainer(Trainer):
         probas = np.array(self.model.predict(df_val.text))
         y_pred = (probas >= 0.5).astype(int)
         y_true = np.vstack(df_val[self.labels].values)
+        self.task.output_prediction(df_val.id, probas, self.run_id)
         return self.classification_report(y_true, y_pred)
 
     def load_predict(self, model_path, test_path):
