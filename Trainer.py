@@ -8,7 +8,9 @@ from sklearn.metrics import matthews_corrcoef, precision_score, recall_score, f1
 from iterstrat.ml_stratifiers import MultilabelStratifiedShuffleSplit
 
 from tasks import *
-tmppath = Path("/tmp/")
+
+tmppath = Path("./experiments/")
+tmppath.mkdir(parents=True, exist_ok=True)
 
 
 class Trainer:
@@ -20,7 +22,7 @@ class Trainer:
 
         self.nb_gpus = torch.cuda.device_count()
         self.use_cuda = self.nb_gpus > 0
-        self.device = torch.device("cuda" if self.use_cuda else "cpu") 
+        self.device = torch.device("cuda" if self.use_cuda else "cpu")
 
         self.task_name = task_name
         if task_name == "task-1":
@@ -60,7 +62,11 @@ class Trainer:
         avg = pd.DataFrame({"weighted_avg": weighted_avg, "macro_avg": macro_avg}).T
         avg.columns = cols[1:]
         df_report = pd.concat([df_report, avg]).round(2)
-        df_report.to_csv(f"/tmp/report_{self.task_name}.tsv", sep="\t")
+        df_report.support = df_report.support.astype(int)
+        model_name = self.backbone.replace("/", "_")
+        df_report.to_csv(
+            str(tmppath / f"report_{self.task_name}_{model_name}.tsv"), sep="\t"
+        )
         return df_report
 
     def train_test_split(self, df):
@@ -98,9 +104,8 @@ class Trainer:
             test.to_csv(test_path, index=False)
         return train, val, test
 
-    def train(self, data_path="/data", model_outpath="/tmp/model.pt"):
+    def train(self, data_path="/data", model_outpath=str(tmppath / "model.pt")):
         df_train, df_val, df_test = self.preprocess_data(data_path)
         self.fit(df_train, df_val, model_outpath)
         report = self.predict(df_test)
         print(report)
-
