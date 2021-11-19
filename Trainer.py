@@ -15,6 +15,7 @@ tmppath.mkdir(parents=True, exist_ok=True)
 
 class Trainer:
     max_epochs = 25
+    test_size = 0.2
 
     def __init__(self, task_name, run_id=1, backbone="prajjwal1/bert-tiny"):
 
@@ -75,7 +76,7 @@ class Trainer:
         train_index, tmp_index, val_index, test_index = (0, 0, 0, 0)
 
         splitter = MultilabelStratifiedShuffleSplit(
-            n_splits=2, test_size=0.2, random_state=17
+            n_splits=2, test_size=self.test_size, random_state=17
         )
         for train_index, tmp_index in splitter.split(y, y):
             break
@@ -109,4 +110,12 @@ class Trainer:
         df_train, df_val, df_test = self.preprocess_data(data_path)
         self.fit(df_train, df_val, model_outpath)
         report = self.predict(df_test)
+        print(report)
+
+    def train_full(self, data_path="/data", model_outpath=str(tmppath / "model.pt")):
+        self.test_size = 0.1
+        df_train, df_val, df_test = self.preprocess_data(data_path)
+        df_val = pd.concat([df_val, df_test])
+        self.fit(df_train, df_val, model_outpath)
+        report = self.predict(df_val)
         print(report)
