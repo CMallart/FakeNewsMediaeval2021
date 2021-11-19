@@ -20,7 +20,7 @@ from Trainer import Trainer
 
 
 class FlashTrainer(Trainer):
-    max_epochs = 80
+    max_epochs = 60
 
     def get_dataloader(self, df_train, df_valid, test_path=None):
         return TextClassificationData.from_data_frame(
@@ -62,12 +62,14 @@ class FlashTrainer(Trainer):
             optimizer=AdamW,
             serializer=Probabilities(multi_label=True),  # Labels(multi_label=True),
             multi_label=self.task.multilabels,
-            learning_rate=1e-4,
+            learning_rate=5e-4,
             lr_scheduler="constant_schedule",
         )
 
         checkpoint_callback = ModelCheckpoint(
-            monitor="val_binary_cross_entropy_with_logits"
+            # monitor="val_binary_cross_entropy_with_logits"
+            monitor="val_matthewscorrcoef",
+            mode="max",
         )
         trainer = flash.Trainer(
             max_epochs=self.max_epochs,
