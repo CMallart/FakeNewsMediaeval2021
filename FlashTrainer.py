@@ -88,15 +88,23 @@ class FlashTrainer(Trainer):
             trainer.save_checkpoint(model_outpath)
 
     def predict(self, df_val):
+
         probas = np.array(self.model.predict(df_val.text))
         y_pred = (probas >= 0.5).astype(int)
         y_true = np.vstack(df_val[self.labels].values)
         self.task.output_prediction(df_val.id, probas, self.run_id)
         return self.classification_report(y_true, y_pred)
 
+    def make_predictions(self, model_path, test_path):
+        self.model = TextClassifier.load_from_checkpoint(checkpoint_path=model_path)
+        df_test = self.task.get_test_dataset(test_path)
+        probas = np.array(self.model.predict(df_test.text))
+        self.task.output_prediction(df_test.id, probas, self.run_id)
+
     def load_predict(self, model_path, test_path):
         self.model = TextClassifier.load_from_checkpoint(checkpoint_path=model_path)
-        df_test = pd.read_csv(test_path)
+        # df_test = pd.read_csv(test_path, names=["id", "text"])
+        df_test = self.task.get_dataset(test_path)
         report = self.predict(df_test)
         print(report)
 

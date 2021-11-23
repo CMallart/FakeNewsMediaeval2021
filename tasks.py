@@ -13,10 +13,27 @@ class Task:
     @classmethod
     def get_dataset(cls, data_path: Path):
         pass
+    
+    @classmethod
+    def get_test_dataset(cls, data_path: Path):
+        cols = "id text".split()
+        df = cls.read_clean_test(data_path, cols)
+        return df
+
 
     @classmethod
     def output_prediction(cls, probas, run_id):
         pass
+
+    @classmethod
+    def read_clean_test(cls, path, cols):
+        """ensure that multiple ',' in text won't be assumed to be separators"""
+        maxsplit = len(cols) - 1
+        path = Path(path)
+        p = path / f"{path.name}-task-1.csv"
+        with p.open() as f:
+            data = [l.strip().split(",", maxsplit) for l in f]
+            return pd.DataFrame(data, columns=cols)
 
     @classmethod
     def read_clean_csv(cls, path, cols):
@@ -27,7 +44,7 @@ class Task:
         with p.open() as f:
             data = [l.strip().split(",", maxsplit) for l in f]
             return pd.DataFrame(data, columns=cols)
-
+    
 
 class Task1(Task):
     task_name = "task-1"
@@ -50,10 +67,12 @@ class Task1(Task):
     def output_prediction(cls, test_id, test_proba, run_id=1):
         # save the output in the task for
         # probas = np.array(cls.model.predict(df_test.text))
+        print(test_proba.shape)
         y_min = np.full((test_proba.shape[0], 1), 0.2)
         y_pred = np.hstack([y_min, test_proba]).argmax(axis=1)
+        # y_pred = (test_proba >= 0.5).astype(int)
         df = pd.DataFrame(list(zip(test_id, y_pred)))
-        outpath = f"./experiments/ME21FND_IRISA_{cls.task_name}_{run_id}.csv"
+        outpath = f"./experiments/ME21FND_DELTAMAP_00{run_id}.txt"
         df.to_csv(outpath, index=False, header=False)
 
 
@@ -73,7 +92,8 @@ class Task2(Task):
 
     @classmethod
     def get_dataset(cls, data_path: Path):
-        cols = ["id"] + Task2.labels + ["text"]
+        # cols = ["id"] + cls.labels + ["text"]
+        cols = "id text".split()
         df = cls.read_clean_csv(data_path, cols)
         for l in Task2.labels:
             df[l] = pd.to_numeric(df[l])
@@ -98,7 +118,7 @@ class Task2(Task):
 
         df = pd.DataFrame(y_pred, columns=cls.labels)
         df["id"] = test_id
-        outpath = f"./experiments/ME21FND_IRISA_{cls.task_name}_{run_id}.csv"
+        outpath = f"./experiments/ME21FND_DELTAMAP_10{run_id}.txt"
         df[["id"] + cls.labels].to_csv(outpath, index=False, header=False)
 
 
@@ -108,9 +128,8 @@ class Task3(Task):
 
     @classmethod
     def get_dataset(cls, data_path: Path):
-        cols = ["id"] + Task2.labels + ["text"]
+        cols = ["id"] + cls.labels + ["text"]
         df = cls.read_clean_csv(data_path, cols)
-
         enc = OneHotEncoder()
         X = enc.fit_transform(df[Task2.labels]).toarray().astype(int)
         bin_labels = pd.DataFrame(X, columns=Task3.labels)
@@ -127,7 +146,7 @@ class Task3(Task):
         ).T
         df = pd.DataFrame(y_pred, columns=Task2.labels)
         df["id"] = test_id
-        outpath = f"./experiments/ME21FND_IRISA_{cls.task_name}_{run_id}.csv"
+        outpath = f"./experiments/ME21FND_DELTAMAP_20{run_id}.txt"
         df[["id"] + Task2.labels].to_csv(outpath, index=False, header=False)
 
 
@@ -137,9 +156,9 @@ class MultiTasks(Task):
 
     @classmethod
     def get_dataset(cls, data_path: Path):
-        df1 = Task1.get_dataset(data_path)[Task1.labels]
-        df2 = Task2.get_dataset(data_path)[Task2.labels]
-        df3 = Task3.get_dataset(data_path)[Task3.labels + ["text", "id"]]
+        df1 = Task1.get_dataset(data_path)
+        df2 = Task2.get_dataset(data_path)
+        df3 = Task3.get_dataset(data_path)
         return pd.concat([df1, df2, df3], axis=1)
 
     @classmethod
