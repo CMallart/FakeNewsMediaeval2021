@@ -13,24 +13,23 @@ class Task:
     @classmethod
     def get_dataset(cls, data_path: Path):
         pass
-    
+
     @classmethod
     def get_test_dataset(cls, data_path: Path):
         cols = "id text".split()
         df = cls.read_clean_test(data_path, cols)
         return df
 
-
     @classmethod
     def output_prediction(cls, probas, run_id):
         pass
 
     @classmethod
-    def read_clean_test(cls, path, cols):
+    def read_clean_test(cls, filepath, cols):
         """ensure that multiple ',' in text won't be assumed to be separators"""
         maxsplit = len(cols) - 1
-        path = Path(path)
-        p = path / f"{path.name}-task-1.csv"
+        # path = Path(path)
+        p = Path(filepath)  # path / f"{path.name}-task-1.csv"
         with p.open() as f:
             data = [l.strip().split(",", maxsplit) for l in f]
             return pd.DataFrame(data, columns=cols)
@@ -44,7 +43,7 @@ class Task:
         with p.open() as f:
             data = [l.strip().split(",", maxsplit) for l in f]
             return pd.DataFrame(data, columns=cols)
-    
+
 
 class Task1(Task):
     task_name = "task-1"
@@ -92,8 +91,8 @@ class Task2(Task):
 
     @classmethod
     def get_dataset(cls, data_path: Path):
-        # cols = ["id"] + cls.labels + ["text"]
-        cols = "id text".split()
+        cols = ["id"] + cls.labels + ["text"]
+        # cols = "id text".split()
         df = cls.read_clean_csv(data_path, cols)
         for l in Task2.labels:
             df[l] = pd.to_numeric(df[l])
@@ -128,7 +127,8 @@ class Task3(Task):
 
     @classmethod
     def get_dataset(cls, data_path: Path):
-        cols = ["id"] + cls.labels + ["text"]
+        # cols = ["id"] + cls.labels + ["text"]
+        cols = ["id"] + Task2.labels + ["text"]
         df = cls.read_clean_csv(data_path, cols)
         enc = OneHotEncoder()
         X = enc.fit_transform(df[Task2.labels]).toarray().astype(int)
@@ -156,9 +156,9 @@ class MultiTasks(Task):
 
     @classmethod
     def get_dataset(cls, data_path: Path):
-        df1 = Task1.get_dataset(data_path)
-        df2 = Task2.get_dataset(data_path)
-        df3 = Task3.get_dataset(data_path)
+        df1 = Task1.get_dataset(data_path)[Task1.labels]
+        df2 = Task2.get_dataset(data_path)[Task2.labels]
+        df3 = Task3.get_dataset(data_path)[Task3.labels + ["text", "id"]]
         return pd.concat([df1, df2, df3], axis=1)
 
     @classmethod
@@ -168,5 +168,6 @@ class MultiTasks(Task):
         Task1.output_prediction(test_id, splits[0], run_id)
         Task2.output_prediction(test_id, splits[1], run_id)
         Task3.output_prediction(test_id, splits[2], run_id)
+
 
 # %%

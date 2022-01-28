@@ -23,7 +23,7 @@ import numpy as np
 
 #%%
 class PromptTrainer(Trainer):
-    max_epochs = 15
+    max_epochs = 10
 
     label_words = {
         "false": ["false", "unlinked", "unrelated"],
@@ -35,7 +35,7 @@ class PromptTrainer(Trainer):
         super().__init__(task_name, backbone)
 
         self.plm, self.tokenizer, self.model_config, self.WrapperClass = load_plm(
-            "bert", backbone
+            "gpt2", backbone
         )
 
         self.template = ManualTemplate(
@@ -128,7 +128,7 @@ class PromptTrainer(Trainer):
         ]
 
         optimizer1 = AdamW(optimizer_grouped_parameters1, lr=1e-4)
-        optimizer2 = AdamW(optimizer_grouped_parameters2, lr=1e-3)
+        optimizer2 = AdamW(optimizer_grouped_parameters2, lr=1e-4)
         return optimizer1, optimizer2
 
     def fit(self, df_train, df_val, model_outpath=None):
@@ -137,9 +137,11 @@ class PromptTrainer(Trainer):
         # torch.nn.BCELoss()
 
         optimizer1, optimizer2 = self.get_optimizers()
-        train_dataloader = self.get_data_loader(self.binarize_dataframe(df_train))
+        train_dataloader = self.get_data_loader(self.binarize_dataframe(df_train.sample(frac=1)))
 
-        self.model = self.model.to(self.device)
+        if self.use_cuda:
+            self.model = self.model.cuda()
+        # self.model = self.model.to(self.device)
         for epoch in tqdm(range(self.max_epochs)):
             self.model.train()
             tot_loss = 0
@@ -155,8 +157,8 @@ class PromptTrainer(Trainer):
                 optimizer1.zero_grad()
                 optimizer2.step()
                 optimizer2.zero_grad()
-            res = self.predict(df_val)
-            print(res)
+        res = self.predict(df_val)
+        print(res)
 
         # print(tot_loss / (step + 1))
 

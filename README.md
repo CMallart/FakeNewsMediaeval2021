@@ -38,7 +38,7 @@ export PROJECT_PATH=/home/me/projects/mediaeval2021/
 export LOCAL_DATA_PATH=/home/me/data/mediaeval2021/
 export MODEL=prajjwal1/bert-tiny
 export TRAINER_SCRIPT=FlashTrainer.py # PromptTrainer.py
-export TASK=task-1 # task-2, task-3, multitasks
+export TASK=multitasks # task-1 task-2, task-3, multitasks
 ```
 
 * Use the docker image to run experiments.
@@ -46,4 +46,26 @@ export TASK=task-1 # task-2, task-3, multitasks
 ```bash
 docker run -it --rm  -v $PROJECT_PATH:/app -v $LOCAL_DATA_PATH:/data mediaeval2021 python FlashTrainer.py --task_name=$TASK --backbone=$MODEL - train /data
 ```
+
+
+### Predictions on test dataset
+
+With the multitasks model
+```bash
+docker run --rm --gpus all -v $PROJECT_PATH:/app -v $LOCAL_DATA_PATH:/data -e TRANSFORMERS_CACHE mediaeval2021 python3 FlashTrainer.py --task_name=multitasks --run_id=1 --backbone=$MODEL - make_predictions ./experiments/multitasks.pt /data/test/test-task-3.csv
+```
+
+
+With specific models for each task
+```bash
+docker run --rm --gpus all -v $PROJECT_PATH:/app -v $LOCAL_DATA_PATH:/data -e TRANSFORMERS_CACHE mediaeval2021 python3 FlashTrainer.py --task_name=task-1 --run_id=2 --backbone=$MODEL - make_predictions ./experiments/task1.pt /data/test/test-task-1.csv
+
+docker run --rm --gpus all -v $PROJECT_PATH:/app -v $LOCAL_DATA_PATH:/data -e TRANSFORMERS_CACHE mediaeval2021 python3 FlashTrainer.py --task_name=task-2 --run_id=2 --backbone=$MODEL - make_predictions ./experiments/task2.pt /data/test/test-task-2.csv
+
+docker run --rm --gpus all -v $PROJECT_PATH:/app -v $LOCAL_DATA_PATH:/data -e TRANSFORMERS_CACHE mediaeval2021 python3 FlashTrainer.py --task_name=task-3 --run_id=2 --backbone=$MODEL - make_predictions ./experiments/task3.pt /data/test/test-task-3.csv
+```
+
+
+
+
 
